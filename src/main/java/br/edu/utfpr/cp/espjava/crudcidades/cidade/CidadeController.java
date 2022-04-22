@@ -1,4 +1,4 @@
-package br.edu.utfpr.cp.espjava.crudcidades.visao;
+package br.edu.utfpr.cp.espjava.crudcidades.cidade;
 
 import java.util.HashSet;
 import java.util.Set;
@@ -23,7 +23,7 @@ public class CidadeController {
 	private final CidadeRepository repository;
 
 	public CidadeController(CidadeRepository repository) {
-		cidades = new HashSet<>();
+		//cidades = new HashSet<>();
 		this.repository = repository;
 	}
 
@@ -50,7 +50,10 @@ public class CidadeController {
 			return("/crud");
 			
 		}else {
-			cidades.add(cidade);
+			//var novaCidade = new CidadeEntidade();
+			//novaCidade.setNome(cidade.getNome());
+			//novaCidade.setEstado(cidade.getEstado());
+			repository.save(cidade.clonar());
 		}
 		
 		return "redirect:/";		
@@ -60,8 +63,12 @@ public class CidadeController {
 	public String excluir(@RequestParam String nome,
 			@RequestParam String estado) {
 
-		cidades.removeIf(cidadeAtual -> cidadeAtual.getNome().equals(nome) && 
-				cidadeAtual.getEstado().equals(estado));
+		//cidades.removeIf(cidadeAtual -> cidadeAtual.getNome().equals(nome) && 
+		//		cidadeAtual.getEstado().equals(estado));
+		
+		var cidadeEstadoEncontrada = repository.findByNomeAndEstado(nome, estado);
+		
+		cidadeEstadoEncontrada.ifPresent(repository::delete);
 
 		return "redirect:/";		
 	}
@@ -71,13 +78,20 @@ public class CidadeController {
 			@RequestParam String estado,
 			Model memoria) {
 
-		var cidadeAtual = cidades.stream()
-				.filter(cidade -> cidade.getNome().equals(nome) && cidade.getEstado().equals(estado)).findAny();
+		//var cidadeAtual = cidades.stream()
+				//.filter(cidade -> cidade.getNome().equals(nome) && cidade.getEstado().equals(estado)).findAny();
 
-		if(cidadeAtual.isPresent()) {
-			memoria.addAttribute("cidadeAtual", cidadeAtual.get());
-			memoria.addAttribute("listaCidades", cidades);
-		}
+		var cidadeAtual = repository.findByNomeAndEstado(nome, estado);
+		
+	//	if(cidadeAtual.isPresent()) {
+		//	memoria.addAttribute("cidadeAtual", cidadeAtual.get());
+		//	memoria.addAttribute("listaCidades", cidades);
+		//}
+		
+		cidadeAtual.ifPresent(cidadeEncontrada -> {
+			memoria.addAttribute("cidadeAtual", cidadeEncontrada);
+			memoria.addAttribute("listaCidades", repository.findAll());
+		});
 
 		return "/crud";
 
@@ -89,11 +103,21 @@ public class CidadeController {
 			@RequestParam String estadoAtual,
 			Cidade cidade, BindingResult validacao, Model memoria) {
 
-		cidades.removeIf(cidadeAtual -> 
+		/*cidades.removeIf(cidadeAtual -> 
 		cidadeAtual.getNome().equals(nomeAtual) && 
 		cidadeAtual.getEstado().equals(estadoAtual));
 
-		criar(cidade, validacao, memoria);
+		criar(cidade, validacao, memoria);*/
+		
+		var cidadeAtual = repository.findByNomeAndEstado(nomeAtual, estadoAtual);
+		
+		if(cidadeAtual.isPresent()) {
+			var cidadeEncontrada = cidadeAtual.get();
+			cidadeEncontrada.setNome(cidade.getNome());
+			cidadeEncontrada.setEstado(cidade.getEstado());
+			
+			repository.saveAndFlush(cidadeEncontrada);
+		}
 
 		return "redirect:/";
 
