@@ -1,12 +1,9 @@
 package br.edu.utfpr.cp.espjava.crudcidades.cidade;
 
-import java.util.HashSet;
-import java.util.Set;
 import java.util.stream.Collectors;
 
 import javax.validation.Valid;
 
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
 import org.springframework.validation.BindingResult;
@@ -17,111 +14,93 @@ import org.springframework.web.bind.annotation.RequestParam;
 @Controller
 public class CidadeController {
 
-	private Set<Cidade> cidades;
-	
-	@Autowired
-	private final CidadeRepository repository;
+    private final CidadeRepository repository;
 
-	public CidadeController(CidadeRepository repository) {
-		//cidades = new HashSet<>();
-		this.repository = repository;
-	}
+    public CidadeController(CidadeRepository repository) {
+        this.repository = repository;
+    }
 
-	@GetMapping("/")
-	public String listar(Model memoria) {
+    @GetMapping("/")
+    public String listar(Model memoria) {
 
-		memoria.addAttribute("listaCidades", repository.findAll().stream().map(cidade -> new Cidade(
-				cidade.getNome(), cidade.getEstado())).collect(Collectors.toList()));
+        memoria.addAttribute("listaCidades", repository
+                                                    .findAll()
+                                                    .stream()
+                                                    .map(Cidade::clonar)
+                                                    .collect(Collectors.toList()));
 
-		return "/crud";		
-	}
+        return "/crud";
+    }
 
-	@PostMapping("/criar")
-	public String criar(@Valid Cidade cidade, BindingResult validacao, Model memoria) {
+    @PostMapping("/criar")
+    public String criar(@Valid Cidade cidade, BindingResult validacao, Model memoria) {
 
-		if(validacao.hasErrors()) {
-			validacao.getFieldErrors()
-			.forEach(error -> memoria.addAttribute(error.getField(), error.getDefaultMessage()));
-			
-			memoria.addAttribute("nomeInformado", cidade.getNome());
-			memoria.addAttribute("estadoInformado", cidade.getEstado());
-			memoria.addAttribute("listaCidades", cidades);
-			
-			return("/crud");
-			
-		}else {
-			//var novaCidade = new CidadeEntidade();
-			//novaCidade.setNome(cidade.getNome());
-			//novaCidade.setEstado(cidade.getEstado());
-			repository.save(cidade.clonar());
-		}
-		
-		return "redirect:/";		
-	}
+        if (validacao.hasErrors()) {
+            validacao
+                .getFieldErrors()
+                .forEach(error -> 
+                        memoria.addAttribute(
+                            error.getField(), 
+                            error.getDefaultMessage())
+                        );
 
-	@GetMapping("/excluir")
-	public String excluir(@RequestParam String nome,
-			@RequestParam String estado) {
+                memoria.addAttribute("nomeInformado", cidade.getNome());
+                memoria.addAttribute("estadoInformado", cidade.getEstado());
+                memoria.addAttribute("listaCidades", repository.findAll());
+                
+                return ("/crud");
+        } else {
+            repository.save(cidade.clonar());
+        }
 
-		//cidades.removeIf(cidadeAtual -> cidadeAtual.getNome().equals(nome) && 
-		//		cidadeAtual.getEstado().equals(estado));
-		
-		var cidadeEstadoEncontrada = repository.findByNomeAndEstado(nome, estado);
-		
-		cidadeEstadoEncontrada.ifPresent(repository::delete);
+        return "redirect:/";
+    }
 
-		return "redirect:/";		
-	}
-	
-	@GetMapping("/preparaAlterar")
-	public String preparaAlterar(@RequestParam String nome,
-			@RequestParam String estado,
-			Model memoria) {
+    @GetMapping("/excluir")
+    public String excluir(
+            @RequestParam String nome, 
+            @RequestParam String estado) {
+        
+        var cidadeEstadoEncontrada = repository.findByNomeAndEstado(nome, estado);
 
-		//var cidadeAtual = cidades.stream()
-				//.filter(cidade -> cidade.getNome().equals(nome) && cidade.getEstado().equals(estado)).findAny();
+        cidadeEstadoEncontrada.ifPresent(repository::delete);
 
-		var cidadeAtual = repository.findByNomeAndEstado(nome, estado);
-		
-	//	if(cidadeAtual.isPresent()) {
-		//	memoria.addAttribute("cidadeAtual", cidadeAtual.get());
-		//	memoria.addAttribute("listaCidades", cidades);
-		//}
-		
-		cidadeAtual.ifPresent(cidadeEncontrada -> {
-			memoria.addAttribute("cidadeAtual", cidadeEncontrada);
-			memoria.addAttribute("listaCidades", repository.findAll());
-		});
+        return "redirect:/";
+    }
 
-		return "/crud";
+    @GetMapping("/preparaAlterar")
+    public String preparaAlterar(
+        @RequestParam String nome, 
+        @RequestParam String estado,
+        Model memoria) {
 
-	}
+            var cidadeAtual = repository.findByNomeAndEstado(nome, estado);
 
+            cidadeAtual.ifPresent(cidadeEncontrada -> {
+                memoria.addAttribute("cidadeAtual", cidadeEncontrada);
+                memoria.addAttribute("listaCidades", repository.findAll());
+            });
 
-	@PostMapping("/alterar")
-	public String alterar(@RequestParam String nomeAtual,
-			@RequestParam String estadoAtual,
-			Cidade cidade, BindingResult validacao, Model memoria) {
+            return "/crud";
+    }
 
-		/*cidades.removeIf(cidadeAtual -> 
-		cidadeAtual.getNome().equals(nomeAtual) && 
-		cidadeAtual.getEstado().equals(estadoAtual));
+    @PostMapping("/alterar")
+    public String alterar(
+        @RequestParam String nomeAtual, 
+        @RequestParam String estadoAtual,
+        Cidade cidade) {
 
-		criar(cidade, validacao, memoria);*/
-		
-		var cidadeAtual = repository.findByNomeAndEstado(nomeAtual, estadoAtual);
-		
-		if(cidadeAtual.isPresent()) {
-			var cidadeEncontrada = cidadeAtual.get();
-			cidadeEncontrada.setNome(cidade.getNome());
-			cidadeEncontrada.setEstado(cidade.getEstado());
-			
-			repository.saveAndFlush(cidadeEncontrada);
-		}
+            var cidadeAtual = repository.findByNomeAndEstado(nomeAtual, estadoAtual);
 
-		return "redirect:/";
+            if (cidadeAtual.isPresent()) {
+                
+                var cidadeEncontrada = cidadeAtual.get();
+                cidadeEncontrada.setNome(cidade.getNome());
+                cidadeEncontrada.setEstado(cidade.getEstado());
 
-	}
+                repository.saveAndFlush(cidadeEncontrada);
+            }
 
-	
+            return "redirect:/";
+    }
 }
